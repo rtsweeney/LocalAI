@@ -6,14 +6,17 @@ It is set up for **Windows with a 16 GB NVIDIA graphics card**.
 
 > **Read this first: what has and hasn't been tested.**
 > This was written on a Linux server with no graphics card, so:
-> - **Tested:** the three Python tools (model-fit checker, audiobook maker, news desk). They have 16 automated tests, and the model-fit checker and the news reader were also run against the real Hugging Face and real news sites.
+> - **Tested:** the three Python tools (model-fit checker, audiobook maker, news desk) and the AI Home control panel. Together they have 37 automated tests. The model-fit checker and the news reader were also run against the real Hugging Face and real news sites.
+> - **Tested against a pretend PC only:** the control panel's install, remove and schedule buttons were clicked through in a real browser, but the "PC" behind them was a stand-in that imitates Windows' installer, Docker and Ollama.
 > - **Checked but not run:** the Docker file is valid and its three images exist, but the containers have never been started.
-> - **Not tested at all:** the three Windows scripts in `scripts\`. They have been proofread, not run. If one fails, the error message and [troubleshooting](docs/09-troubleshooting.md) are the place to start.
+> - **Not tested at all:** `Start AI Home.bat` and the three scripts in `scripts\`. They have been proofread, not run. If one fails, the error message and [troubleshooting](docs/09-troubleshooting.md) are the place to start.
 
 ## What you get
 
 | You want to… | You use | Where it runs | Guide |
 |---|---|---|---|
+| **Manage everything from one page**: install, remove, open, schedule | **AI Home** | `http://localhost:3010` | [10](docs/10-control-panel.md) |
+| Run jobs at set times | AI Home's Schedule tab | Same page | [10](docs/10-control-panel.md#scheduled-jobs) |
 | Chat with a model, from the PC or iPhone | Open WebUI | `http://localhost:3000` | [02](docs/02-install.md) |
 | Pick any model from Hugging Face that fits your card | Ollama + `tools\fit.py` | A terminal | [03](docs/03-models.md) |
 | Build an app from one sentence and let it run | OpenHands Agent Canvas | `http://localhost:3001/canvas` | [04](docs/04-app-builder.md) |
@@ -42,7 +45,9 @@ New to all this? Read [01: the five ideas you need](docs/01-concepts.md) first. 
   |    Ollama :11434  (runs the language models)               |
   |    ComfyUI        (makes images and video)                 |
   |                                                            |
-  |  Small tools in this folder (plain Python)                 |
+  |  In this folder (plain Python)                             |
+  |    AI Home :3010  (the control panel; installs, removes,   |
+  |                    opens and schedules everything above)   |
   |    fit.py    audiobook.py    newsdesk.py                   |
   +------------------------------------------------------------+
 ```
@@ -54,20 +59,14 @@ New to all this? Read [01: the five ideas you need](docs/01-concepts.md) first. 
 You need about **150 GB of free disk space** (models are big) and an up-to-date NVIDIA driver.
 
 1. **Get this folder onto the PC.** On the GitHub page, click **Code → Download ZIP**, and unzip it somewhere simple like `C:\LocalAI`.
-2. **Open a terminal in that folder.** In File Explorer, open the folder, click the address bar, type `powershell` and press Enter.
-3. **Run the one-time setup:**
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-   ```
-4. **Restart the PC**, open **Docker Desktop** once from the Start menu, and wait for "Engine running".
-5. **Start everything:**
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1
-   ```
-   The first start downloads about 25 GB of models. Go and make a coffee.
-6. **Open `http://localhost:3000`** and create your account. The first account is the owner.
+2. **Double-click `Start AI Home.bat`.** The first time, it installs Python and asks you to double-click it again. Then the control panel opens in your browser.
+3. On **Install & remove**, click **Install** on **Ollama**, then on **Docker Desktop**.
+4. **Restart the PC.** Open **Docker Desktop** once from the Start menu and wait for "Engine running". Open **Ollama** from the Start menu too.
+5. Double-click `Start AI Home.bat` again. Click **Install** on **Chat home page**, and on any optional parts you want.
+6. On **Models**, click **Download** on the starter models. This is about 25 GB, so go and make a coffee.
+7. On **Home**, click **Open** on the chat page and create your account. The first account is the owner.
 
-Then follow the guides in order. [02: install](docs/02-install.md) explains each of those steps and what you should see.
+[10: the control panel](docs/10-control-panel.md) explains every button. If you would sooner type commands than click, `scripts\setup.ps1` and `scripts\start.ps1` do the same setup; see [02](docs/02-install.md).
 
 ## Good to know before you start
 
@@ -81,4 +80,4 @@ Then follow the guides in order. [02: install](docs/02-install.md) explains each
 python -m unittest discover tests
 ```
 
-This runs the 16 tests with a pretend model, so it works before any model is downloaded.
+This runs the 37 tests with a pretend model and a pretend PC, so it works before anything is installed.

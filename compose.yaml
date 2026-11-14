@@ -7,6 +7,9 @@
 # Every port below starts with 127.0.0.1, which means "this PC only". Nothing here is visible
 # to your home network or the internet. Your iPhone reaches it through Tailscale (docs/07).
 
+# A fixed project name, so the data volumes are always called localai_... wherever this folder lives.
+name: localai
+
 services:
   # The chat home page. Open http://localhost:3000
   open-webui:

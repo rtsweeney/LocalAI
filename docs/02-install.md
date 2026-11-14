@@ -1,6 +1,6 @@
 # 02. Install, step by step
 
-The [README](../README.md) has the short version. This page explains what each step does and what you should see.
+**The easy way is the control panel:** double-click `Start AI Home.bat` and use its buttons ([10](10-control-panel.md)). This page is the same setup done by typing commands instead, and it explains what each step does. Use whichever you like; they install the same things.
 
 ## Before you start
 

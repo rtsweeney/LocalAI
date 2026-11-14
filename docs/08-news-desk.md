@@ -97,13 +97,12 @@ Everything is in `newsdesk\config.json`:
 
 ## Running it every morning
 
-Windows Task Scheduler can run it for you. This sets a 5:00 am daily run (adjust the path to your folder):
+In AI Home, open the **Schedule** tab and add a job:
 
-```powershell
-schtasks /Create /SC DAILY /ST 05:00 /TN "News desk" /TR "python C:\LocalAI\newsdesk\newsdesk.py run"
-```
+- **What it does:** Run the news desk
+- **When:** `daily at 5am`
 
-The PC must be awake, and Ollama running, at that time.
+When drafts are ready, a banner on the Home tab links straight to the review page. The PC must be awake, with Ollama and AI Home running, at that time ([10](10-control-panel.md#keeping-schedules-alive)).
 
 ## What has and hasn't been tested
 

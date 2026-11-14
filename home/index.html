@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Home</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f6f5f2; --card: #ffffff; --ink: #1c1b19; --soft: #66635c; --line: #dedbd3;
+  --accent: #2f5fd0; --accent-ink: #ffffff; --ok: #1d7a46; --warn: #a85b00; --bad: #b3261e;
+  --chip: #ecebe6;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151514; --card: #1f1f1d; --ink: #ecebe6; --soft: #a3a097; --line: #36352f;
+          --accent: #8fb0ff; --accent-ink: #10131c; --ok: #6fd39a; --warn: #f0b060; --bad: #ff8a80;
+          --chip: #2a2a27; }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 14px 20px;
+         border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; z-index: 2; }
+header h1 { font-size: 18px; margin: 0; }
+#gpu { color: var(--soft); font-size: 13px; margin-left: auto; }
+nav { display: flex; flex-wrap: wrap; gap: 4px; }
+nav button { background: none; border: 0; color: var(--soft); padding: 6px 12px; border-radius: 6px; font: inherit; cursor: pointer; }
+nav button[aria-selected=true] { background: var(--chip); color: var(--ink); font-weight: 600; }
+main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+section[hidden] { display: none; }
+h2 { font-size: 16px; margin: 26px 0 4px; }
+h2:first-child { margin-top: 0; }
+p.lead { color: var(--soft); margin: 0 0 12px; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card p { margin: 0; color: var(--soft); font-size: 13.5px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.push { margin-top: auto; }
+.pill { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--chip); color: var(--soft); white-space: nowrap; }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+button, a.btn { font: inherit; font-size: 13.5px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line);
+                background: var(--card); color: var(--ink); cursor: pointer; text-decoration: none; display: inline-block; }
+button.primary, a.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.danger { color: var(--bad); }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select, textarea { font: inherit; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+textarea { min-height: 84px; resize: vertical; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 3px; }
+.hint { font-size: 12.5px; color: var(--soft); margin: 3px 0 0; }
+.err { color: var(--bad); font-size: 13.5px; margin: 6px 0 0; min-height: 1.2em; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 12px; color: var(--soft); font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wrap { overflow-x: auto; }
+pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 6px 0 0; font: 12.5px/1.45 ui-monospace, Consolas, monospace;
+      white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chips button { font-size: 12.5px; padding: 3px 9px; border-radius: 99px; }
+#toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+         padding: 9px 16px; border-radius: 8px; font-size: 14px; max-width: 90vw; z-index: 5; }
+#toast[hidden] { display: none; }
+.banner { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+details summary { cursor: pointer; font-size: 13px; color: var(--soft); }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Home</h1>
+  <nav role="tablist" id="tabs"></nav>
+  <span id="gpu"></span>
+</header>
+<main>
+  <section id="tab-home">
+    <div id="banner"></div>
+    <h2>Open</h2>
+    <p class="lead">Everything that is installed. A green dot means it is running right now.</p>
+    <div class="grid" id="home-cards"></div>
+    <h2>On the graphics card now</h2>
+    <p class="lead">Your card holds one big model at a time. Unload a chat model before a heavy image or video job.</p>
+    <div id="loaded"></div>
+    <h2>Guides</h2>
+    <div class="row" id="guides"></div>
+  </section>
+
+  <section id="tab-parts" hidden>
+    <h2>Required</h2>
+    <p class="lead">The basics. Install these three first, in this order.</p>
+    <div class="grid" id="parts-required"></div>
+    <h2>Optional</h2>
+    <p class="lead">Add or remove these whenever you like. Removing one frees its disk space.</p>
+    <div class="grid" id="parts-optional"></div>
+    <h2>Keep schedules running</h2>
+    <div class="card"><div class="row">
+      <label style="margin:0;font-weight:400;display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="autostart" style="width:auto"> Start AI Home quietly when I sign in to Windows</label>
+    </div><p>Scheduled jobs only run while AI Home is running. With this on, it starts in the background after every restart.</p></div>
+  </section>
+
+  <section id="tab-models" hidden>
+    <h2>Starter models</h2>
+    <p class="lead">Chosen to fit a 16 GB card. One click downloads each.</p>
+    <div class="grid" id="starters"></div>
+    <h2>On this PC</h2>
+    <div class="wrap" id="models"></div>
+    <h2>Get another model from Hugging Face</h2>
+    <p class="lead">Search, check which versions fit your card, then download the one you want.</p>
+    <div class="card">
+      <div class="row"><input id="hf-q" placeholder="Search words, like: qwen coder" style="flex:1;min-width:200px" aria-label="Search Hugging Face">
+        <button id="hf-search">Search</button></div>
+      <div id="hf-results"></div>
+      <div class="row"><input id="hf-repo" placeholder="owner/name-GGUF" style="flex:1;min-width:200px" aria-label="Hugging Face repo">
+        <select id="hf-ctx" style="width:auto" aria-label="Context length">
+          <option value="8192">For chat (8k context)</option>
+          <option value="32768">For the app builder (32k context)</option></select>
+        <button id="hf-check" class="primary">Check fit</button></div>
+      <p class="err" id="hf-err"></p>
+      <div class="wrap" id="hf-fit"></div>
+    </div>
+    <h2>Or download by exact name</h2>
+    <div class="card"><div class="row">
+      <input id="pull-name" placeholder="gemma4:12b   or   hf.co/owner/repo:Q4_K_M" style="flex:1;min-width:220px" aria-label="Model name">
+      <button id="pull-go">Download</button></div><p class="err" id="pull-err"></p></div>
+  </section>
+
+  <section id="tab-schedule" hidden>
+    <h2>Scheduled jobs</h2>
+    <p class="lead">Each job runs on its own, one at a time, and saves what it produced. A model job starts fresh every run: it remembers nothing from earlier runs or chats, so write the request so it stands alone.</p>
+    <div id="schedules"></div>
+    <h2 id="form-title">New job</h2>
+    <div class="card">
+      <label for="s-name">Name</label><input id="s-name" maxlength="80" placeholder="Morning news drafts">
+      <label for="s-kind">What it does</label>
+      <select id="s-kind">
+        <option value="prompt">Ask a model something and save the answer</option>
+        <option value="newsdesk">Run the news desk (draft Latest entries for review)</option>
+        <option value="command">Run a command (advanced)</option>
+      </select>
+      <div id="s-prompt-box">
+        <label for="s-model">Model</label><select id="s-model"></select>
+        <label for="s-prompt">What to ask</label><textarea id="s-prompt" placeholder="Write three ideas for explainers about how a bill becomes law."></textarea>
+      </div>
+      <div id="s-command-box" hidden>
+        <label for="s-command">Command</label><input id="s-command" placeholder='python tools\audiobook.py "C:\Books\book.epub"'>
+        <p class="hint">Runs in the LocalAI folder, the same as typing it into a Command Prompt window. Only use commands you understand.</p>
+      </div>
+      <label for="s-when">When</label><input id="s-when" placeholder="daily at 5am">
+      <div class="chips" id="s-chips"></div>
+      <p class="hint" id="s-preview"></p>
+      <p class="err" id="s-err"></p>
+      <div class="row"><button class="primary" id="s-save">Save job</button><button id="s-cancel" hidden>Cancel edit</button></div>
+    </div>
+  </section>
+
+  <section id="tab-activity" hidden>
+    <h2>Activity</h2>
+    <p class="lead">Everything the panel has done since it started, newest first.</p>
+    <div id="jobs"></div>
+  </section>
+</main>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const $ = (id) => document.getElementById(id);
+// Build page elements without ever treating text as HTML, so nothing a model, a web page or a
+// command prints can inject markup.
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") e.className = v; else if (k === "on") e.addEventListener("click", v);
+    else if (v === true) e.setAttribute(k, ""); else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return e;
+}
+async function call(path, body) {
+  const r = await fetch(path, { method: body ? "POST" : "GET", headers: { "X-Token": TOKEN, "Content-Type": "application/json" },
+                                body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+let toastTimer;
+function toast(text) { $("toast").textContent = text; $("toast").hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").hidden = true, 4000); }
+async function doIt(path, body, said) { try { await call(path, body); if (said) toast(said); refresh(); } catch (e) { toast(e.message); } }
+function fill(id, ...kids) { $(id).replaceChildren(...kids.flat().filter(Boolean)); }
+const when = (iso) => iso ? new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+
+// ---------------------------------------------------------------- tabs
+const TABS = [["home", "Home"], ["parts", "Install & remove"], ["models", "Models"], ["schedule", "Schedule"], ["activity", "Activity"]];
+function show(tab) {
+  for (const [id] of TABS) { $("tab-" + id).hidden = id !== tab; $("nav-" + id).setAttribute("aria-selected", id === tab); }
+  try { localStorage.setItem("tab", tab); } catch {}
+}
+fill("tabs", TABS.map(([id, name]) => h("button", { id: "nav-" + id, role: "tab", on: () => show(id) }, name)));
+
+// ---------------------------------------------------------------- drawing
+let S = null, busy = new Set(), openLogs = new Set(), openRuns = {};
+function statusPill(c) {
+  if (!c.installed) return h("span", { class: "pill" }, "Not installed");
+  if (c.running === true) return h("span", { class: "pill ok" }, "● Running");
+  if (c.running === false) return h("span", { class: "pill warn" }, "Stopped");
+  return h("span", { class: "pill" }, "Installed");
+}
+function act(c, action, label, cls, ask) {
+  return h("button", { class: cls || "", disabled: busy.has(c.id), on: () => {
+    if (ask && !confirm(ask)) return;
+    doIt("/api/component", { id: c.id, action }, label + " " + c.name + ": started. See Activity for progress.");
+  } }, label);
+}
+function partCard(c) {
+  const b = [];
+  const missing = (c.needs || []).map((n) => S.components.find((x) => x.id === n)).filter((x) => !x.running);
+  if (!c.installed) b.push(act(c, "install", "Install", "primary"));
+  else if (c.kind === "compose") {
+    b.push(c.running ? act(c, "stop", "Stop") : act(c, "start", "Start", "primary"));
+    b.push(act(c, "uninstall", "Uninstall", "", c.data ? `Uninstall ${c.name}? Your data is kept: ${c.data}.` : `Uninstall ${c.name}?`));
+    if (c.data) b.push(act(c, "delete_data", "Uninstall and delete data", "danger",
+      `This permanently deletes ${c.data}. It cannot be undone. Continue?`));
+  } else {
+    b.push(act(c, "uninstall", "Uninstall", c.group === "required" ? "danger" : "",
+      c.group === "required" ? `${c.name} is required. Without it most of AI Home stops working. Uninstall anyway?` : `Uninstall ${c.name}?`));
+  }
+  return h("div", { class: "card" }, h("h3", null, c.name, statusPill(c)), h("p", null, c.what),
+    c.installed && c.running === false && c.start_hint ? h("p", null, "To start it: " + c.start_hint) : null,
+    !c.installed && missing.length ? h("p", null, "Needs first: " + missing.map((m) => m.name).join(", ") + ".") : null,
+    h("div", { class: "row push" }, b));
+}
+function homeCard(c) {
+  return h("div", { class: "card" }, h("h3", null, c.name, statusPill(c)), h("p", null, c.what),
+    h("div", { class: "row push" },
+      c.open && c.running ? h("a", { class: "btn primary", href: c.open, target: "_blank", rel: "noopener" }, "Open") : null,
+      c.kind === "compose" && !c.running ? act(c, "start", "Start", "primary") : null,
+      c.running === false && c.start_hint ? h("p", null, c.start_hint) : null,
+      c.running == null && c.start_hint ? h("p", null, c.start_hint) : null));
+}
+function draw() {
+  if (!S) return;
+  busy = new Set(S.jobs.filter((j) => j.status !== "done" && j.status !== "failed").map((j) => (S.components.find((c) => j.title.endsWith(c.name)) || {}).id));
+  $("gpu").textContent = S.gpu.name ? `${S.gpu.name} · ${S.gpu.vram_gb} GB` : "";
+  const installed = S.components.filter((c) => c.installed);
+  const need = S.components.filter((c) => c.group === "required" && !c.installed);
+  fill("banner", need.length ? h("div", { class: "banner" }, h("strong", null, "Finish setting up: "),
+    need.map((c) => c.name).join(", ") + (need.length === 1 ? " is" : " are") + " not installed yet. ",
+    h("button", { on: () => show("parts") }, "Go to Install & remove")) : null,
+    S.drafts ? h("div", { class: "banner" }, "News drafts are waiting for your review. ",
+      h("a", { class: "btn", href: `/drafts/${S.drafts}/review.html`, target: "_blank", rel: "noopener" }, `Open drafts from ${S.drafts}`)) : null);
+  fill("home-cards", installed.length ? installed.map(homeCard) : h("p", { class: "lead" }, "Nothing is installed yet."));
+  const loaded = (S.models || []).filter((m) => m.loaded);
+  fill("loaded", S.models === null ? h("p", { class: "lead" }, "Ollama isn't answering, so models can't be shown.")
+    : loaded.length ? h("div", { class: "row" }, loaded.map((m) => h("span", { class: "row" }, h("span", { class: "pill ok" }, m.name),
+        h("button", { on: () => doIt("/api/model", { action: "unload", name: m.name }, "Unloading " + m.name) }, "Unload"))))
+    : h("p", { class: "lead" }, "Nothing is loaded. The card is free."));
+  fill("guides", S.guides.map((g) => h("a", { class: "btn", href: "/guide/" + g.file, target: "_blank", rel: "noopener" }, g.title)));
+  fill("parts-required", S.components.filter((c) => c.group === "required").map(partCard));
+  fill("parts-optional", S.components.filter((c) => c.group === "optional").map(partCard));
+  $("autostart").checked = S.autostart;
+
+  fill("starters", S.starters.map((m) => h("div", { class: "card" },
+    h("h3", null, m.name, h("span", { class: "pill" + (m.have ? " ok" : "") }, m.have ? "Downloaded" : m.group === "required" ? "Required" : "Optional")),
+    h("p", null, m.why),
+    h("div", { class: "row push" }, m.have ? null : h("button", { class: "primary", disabled: S.models === null,
+      on: () => doIt("/api/model", { action: "pull", name: m.name }, "Downloading " + m.name + ". See Activity for progress.") }, "Download")))));
+  fill("models", S.models === null ? h("p", { class: "lead" }, "Ollama isn't answering. Install or start it on the Install & remove tab.")
+    : !S.models.length ? h("p", { class: "lead" }, "No models downloaded yet.")
+    : h("table", null, h("thead", null, h("tr", null, h("th", null, "Model"), h("th", null, "Size on disk"), h("th", null, ""), h("th", null, ""))),
+        h("tbody", null, S.models.map((m) => h("tr", null, h("td", null, m.name), h("td", { class: "num" }, m.gb + " GB"),
+          h("td", null, m.loaded ? h("span", { class: "pill ok" }, "Loaded") : null),
+          h("td", null, h("button", { class: "danger", on: () => confirm(`Delete ${m.name} from disk? You can download it again later.`) &&
+            doIt("/api/model", { action: "delete", name: m.name }, "Deleting " + m.name) }, "Delete")))))));
+  const sel = $("s-model"), keep = sel.value;
+  sel.replaceChildren(...(S.models || []).filter((m) => !/embed/i.test(m.name)).map((m) => h("option", { value: m.name }, m.name)));
+  if (keep) sel.value = keep;
+
+  fill("schedules", !S.schedules.length ? h("p", { class: "lead" }, "No jobs yet. Add one below.") : S.schedules.map((s) => h("div", { class: "card", style: "margin-bottom:10px" },
+    h("h3", null, s.name, h("span", { class: "pill" + (s.queued ? " ok" : s.enabled ? "" : " warn") }, s.queued ? "Running now" : s.enabled ? "On" : "Off"),
+      s.last ? h("span", { class: "pill " + (s.last.ok ? "ok" : "bad") }, (s.last.ok ? "Last run worked, " : "Last run failed, ") + when(s.last.at)) : null),
+    h("p", null, ({ prompt: "Asks " + s.model, newsdesk: "Runs the news desk", command: "Runs: " + s.command })[s.kind] + " · " + s.when_input +
+      (s.enabled && s.next ? " · next: " + when(s.next) : "")),
+    h("div", { class: "row" },
+      h("button", { disabled: s.queued, on: () => doIt("/api/schedule/change", { id: s.id, action: "run" }, "Started. The result appears here when it finishes.") }, "Run now"),
+      h("button", { on: () => doIt("/api/schedule/change", { id: s.id, action: "toggle" }) }, s.enabled ? "Turn off" : "Turn on"),
+      h("button", { on: () => edit(s) }, "Edit"),
+      h("button", { class: "danger", on: () => confirm(`Delete the job "${s.name}" and its saved results?`) && doIt("/api/schedule/change", { id: s.id, action: "delete" }, "Deleted.") }, "Delete")),
+    s.runs.length ? h("div", { class: "chips" }, h("span", { class: "hint" }, "Results:"), s.runs.map((f) => h("button", { on: () => showRun(s.id, f) }, f.replace(".txt", "").replace(/ (\d\d)(\d\d)\d\d$/, " $1:$2")))) : null,
+    openRuns[s.id] ? h("pre", null, openRuns[s.id]) : null)));
+
+  fill("jobs", !S.jobs.length ? h("p", { class: "lead" }, "Nothing yet.") : S.jobs.map((j) => {
+    const d = h("details", openLogs.has(j.id) || j.status === "running" ? { open: true } : null,
+      h("summary", null, j.lines.length ? j.lines[j.lines.length - 1] : "Waiting its turn"), h("pre", null, j.lines.join("\n")));
+    d.addEventListener("toggle", () => d.open ? openLogs.add(j.id) : openLogs.delete(j.id));
+    return h("div", { class: "card", style: "margin-bottom:10px" },
+      h("h3", null, j.title, h("span", { class: "pill " + ({ done: "ok", failed: "bad", running: "warn" })[j.status] },
+        ({ done: "Finished", failed: "Failed", running: "Working…", waiting: "Waiting" })[j.status])), d);
+  }));
+}
+async function showRun(id, file) {
+  try { openRuns[id] = (await call(`/api/output?id=${id}&file=${encodeURIComponent(file)}`)).text || "(empty)"; draw(); } catch (e) { toast(e.message); }
+}
+async function refresh() { try { S = await call("/api/state"); draw(); } catch (e) { $("gpu").textContent = "AI Home stopped answering. Start it again."; } }
+
+// ---------------------------------------------------------------- models tab
+$("hf-search").onclick = async () => {
+  $("hf-err").textContent = "";
+  try {
+    const rows = await call("/api/search?q=" + encodeURIComponent($("hf-q").value));
+    fill("hf-results", rows.length ? h("div", { class: "chips" }, rows.map((r) => h("button", { title: r.downloads.toLocaleString() + " downloads",
+      on: () => { $("hf-repo").value = r.id; $("hf-check").click(); } }, r.id))) : h("p", { class: "hint" }, "Nothing found. Try fewer words."));
+  } catch (e) { $("hf-err").textContent = e.message; }
+};
+$("hf-check").onclick = async () => {
+  $("hf-err").textContent = ""; fill("hf-fit", h("p", { class: "hint" }, "Checking…"));
+  try {
+    const f = await call(`/api/fit?repo=${encodeURIComponent($("hf-repo").value)}&context=${$("hf-ctx").value}`);
+    const cls = { "FITS": "ok", "TIGHT": "warn", "TOO BIG": "bad" }, word = { "FITS": "Fits", "TIGHT": "Tight", "TOO BIG": "Too big" };
+    fill("hf-fit", !f.versions.length ? h("p", { class: "hint" }, "This repo has no GGUF files, so Ollama can't run it.") :
+      [h("p", { class: "hint" }, `Checked against your ${f.vram} GB card. "Fits" runs fully on the card and is fast; "Too big" still runs but spills into normal memory and is much slower. Q4_K_M is the usual choice.`),
+       h("table", null, h("thead", null, h("tr", null, h("th", null, "Version"), h("th", null, "Download"), h("th", null, "Memory needed"), h("th", null, "Verdict"), h("th", null, ""))),
+        h("tbody", null, f.versions.map((v) => h("tr", null, h("td", null, v.quant), h("td", { class: "num" }, v.gb + " GB"), h("td", { class: "num" }, v.need + " GB"),
+          h("td", null, h("span", { class: "pill " + cls[v.verdict] }, word[v.verdict])),
+          h("td", null, v.pull ? h("button", { class: v.quant === "Q4_K_M" && v.verdict === "FITS" ? "primary" : "",
+            on: () => (v.verdict !== "TOO BIG" || confirm("This version doesn't fit your card and will be slow. Download anyway?")) &&
+              doIt("/api/model", { action: "pull", name: v.pull }, "Downloading. See Activity for progress.") }, "Download") : null)))))]);
+  } catch (e) { fill("hf-fit"); $("hf-err").textContent = e.message; }
+};
+$("pull-go").onclick = async () => {
+  $("pull-err").textContent = "";
+  try { await call("/api/model", { action: "pull", name: $("pull-name").value.trim() }); toast("Downloading. See Activity for progress."); $("pull-name").value = ""; refresh(); }
+  catch (e) { $("pull-err").textContent = e.message; }
+};
+$("autostart").onchange = (e) => doIt("/api/autostart", { on: e.target.checked }, e.target.checked ? "AI Home will start when you sign in." : "AI Home will no longer start by itself.");
+
+// ---------------------------------------------------------------- schedule form
+let editing = null, previewTimer;
+fill("s-chips", ["every 2h", "daily at 5am", "weekdays at 6:30", "mon,wed,fri at 8pm", "in 30m"].map((t) => h("button", { on: () => { $("s-when").value = t; preview(); } }, t)));
+function kindBoxes() { $("s-prompt-box").hidden = $("s-kind").value !== "prompt"; $("s-command-box").hidden = $("s-kind").value !== "command"; }
+$("s-kind").onchange = kindBoxes;
+async function preview() {
+  const text = $("s-when").value.trim();
+  if (!text) { $("s-preview").textContent = 'Plain words work: "every 2h", "daily at 9am", "weekdays at 6:30", "in 45m", "once 2026-12-01 14:00". Cron lines work too.'; return; }
+  try { const p = await call("/api/preview", { when_input: text }); $("s-preview").textContent = p.next ? "First run: " + when(p.next) : "This would never run."; $("s-err").textContent = ""; }
+  catch (e) { $("s-preview").textContent = ""; $("s-err").textContent = e.message; }
+}
+$("s-when").oninput = () => { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 350); };
+function edit(s) {
+  editing = s.id; $("form-title").textContent = "Edit job"; $("s-cancel").hidden = false;
+  $("s-name").value = s.name; $("s-kind").value = s.kind; $("s-when").value = s.when_input;
+  $("s-prompt").value = s.prompt || ""; $("s-command").value = s.command || ""; if (s.model) $("s-model").value = s.model;
+  kindBoxes(); preview(); $("form-title").scrollIntoView({ behavior: "smooth" });
+}
+function clearForm() {
+  editing = null; $("form-title").textContent = "New job"; $("s-cancel").hidden = true;
+  for (const id of ["s-name", "s-when", "s-prompt", "s-command"]) $(id).value = "";
+  $("s-err").textContent = ""; preview();
+}
+$("s-cancel").onclick = clearForm;
+$("s-save").onclick = async () => {
+  try {
+    await call("/api/schedule", { id: editing, name: $("s-name").value, kind: $("s-kind").value, when_input: $("s-when").value,
+                                  model: $("s-model").value, prompt: $("s-prompt").value, command: $("s-command").value });
+    toast("Saved."); clearForm(); refresh();
+  } catch (e) { $("s-err").textContent = e.message; }
+};
+
+let first = "home"; try { first = localStorage.getItem("tab") || "home"; } catch {}
+show(TABS.some(([id]) => id === first) ? first : "home"); kindBoxes(); preview(); refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>

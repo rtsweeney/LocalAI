@@ -15,6 +15,19 @@ Find the symptom, try the fixes in order.
 | "required variable WEBUI_SECRET_KEY is missing" | No `.env` file | Run `setup.ps1` |
 | "port is already allocated" | Another program uses 3000, 3001 or 8880 | In `compose.yaml`, change the middle number, for example `127.0.0.1:3005:8080`, and use that port instead |
 
+## AI Home (the control panel)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Double-clicking `Start AI Home.bat` flashes and closes | Python was only just installed | Double-click it again. If it still closes, restart the PC |
+| Windows warns the file came from the internet | It was downloaded in a ZIP | Click **More info → Run anyway**, or right-click the file → Properties → tick **Unblock** |
+| A part stays "Not installed" after Install | The install failed or needs a restart | Open the **Activity** tab and read that job's log |
+| "Docker isn't running" when installing a part | Docker Desktop is closed, or the PC wasn't restarted | Restart, open Docker Desktop, wait for "Engine running" |
+| Page says "AI Home stopped answering" | Its window was closed | Double-click `Start AI Home.bat` again |
+| "Reload the page" errors | AI Home was restarted while the page was open | Reload the page |
+| A scheduled job didn't run | AI Home or the PC was off at that time | Tick "Start AI Home quietly when I sign in"; set Sleep to Never |
+| A model job fails straight away | Ollama is off, or that model was deleted | Start Ollama; edit the job and pick a model you have |
+
 ## Chat
 
 | Symptom | Likely cause | Fix |
@@ -81,3 +94,7 @@ docker compose up -d
 ```
 
 Ollama, Docker Desktop and ComfyUI update themselves or prompt you.
+
+---
+
+Next: [10. AI Home, the control panel](10-control-panel.md)
