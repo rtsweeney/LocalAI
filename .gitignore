@@ -1,0 +1,5 @@
+.env
+apps/
+newsdesk/drafts/
+__pycache__/
+*.pyc

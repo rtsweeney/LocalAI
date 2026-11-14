@@ -1,0 +1,22 @@
+{
+  "ollama_url": "http://127.0.0.1:11434",
+  "chat_model": "gemma4:12b",
+  "embed_model": "qwen3-embedding:0.6b",
+  "context_tokens": 16384,
+
+  "look_back_hours": 36,
+  "min_outlets": 2,
+  "max_stories": 8,
+  "max_articles_per_story": 4,
+  "max_article_chars": 6000,
+  "same_story_similarity": 0.75,
+  "drafts_folder": "drafts",
+
+  "feeds": [
+    { "name": "PBS NewsHour", "url": "https://www.pbs.org/newshour/feeds/rss/politics" },
+    { "name": "The Hill", "url": "https://thehill.com/homenews/feed/" },
+    { "name": "Fox News", "url": "https://moxie.foxnews.com/google-publisher/politics.xml" },
+    { "name": "CBS News", "url": "https://www.cbsnews.com/latest/rss/politics" },
+    { "name": "ABC News", "url": "https://abcnews.go.com/abcnews/politicsheadlines" }
+  ]
+}

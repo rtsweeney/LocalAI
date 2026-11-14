@@ -1,0 +1,57 @@
+# The parts of your AI home that are "just web pages" run here, inside Docker.
+# The parts that need the graphics card (Ollama and ComfyUI) are installed on Windows directly,
+# because that is the simplest way to give them the GPU.
+#
+# Start everything:  .\scripts\start.ps1      Stop everything:  .\scripts\stop.ps1
+#
+# Every port below starts with 127.0.0.1, which means "this PC only". Nothing here is visible
+# to your home network or the internet. Your iPhone reaches it through Tailscale (docs/07).
+
+services:
+  # The chat home page. Open http://localhost:3000
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:8080"
+    environment:
+      # Where Ollama is. "host.docker.internal" is Docker's name for "the PC I'm running on".
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # Keeps you signed in across restarts. Made for you by setup.ps1 and stored in .env
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Run scripts\setup.ps1 first. It creates the .env file.}
+      # The "read aloud" button uses the voice engine below.
+      AUDIO_TTS_ENGINE: openai
+      AUDIO_TTS_OPENAI_API_BASE_URL: http://kokoro:8880/v1
+      AUDIO_TTS_OPENAI_API_KEY: not-needed
+      AUDIO_TTS_MODEL: kokoro
+      AUDIO_TTS_VOICE: af_heart
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - open-webui:/app/backend/data
+
+  # The voice engine (Kokoro). Small enough to run on the processor, so the GPU stays free.
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8880:8880"
+
+  # The app builder (OpenHands Agent Canvas). Open http://localhost:3001/canvas
+  # It can only see the one folder you give it below, not the rest of your PC.
+  agent-canvas:
+    image: ghcr.io/openhands/agent-canvas:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:8000"
+    environment:
+      AGENT_CANVAS_ALLOW_LAN_SESSION_KEY: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - openhands-data:/home/openhands/.openhands
+      - ${APPS_FOLDER:-./apps}:/projects
+
+volumes:
+  open-webui:
+  openhands-data:
