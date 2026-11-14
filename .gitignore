@@ -4,3 +4,5 @@ newsdesk/drafts/
 __pycache__/
 *.pyc
 home/data/
+outputs/
+characters/

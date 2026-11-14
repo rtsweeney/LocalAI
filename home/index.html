@@ -64,6 +64,16 @@ pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; 
 #toast[hidden] { display: none; }
 .banner { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
 details summary { cursor: pointer; font-size: 13px; color: var(--soft); }
+details.setup > summary { font-size: 15px; font-weight: 600; color: var(--ink); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.gallery a { display: block; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+.gallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+.gallery video { display: block; width: 100%; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 14px; }
+code.copy { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; font: 12.5px ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+audio { width: 100%; margin-top: 4px; }
+.explain { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px; }
+.explain p { margin: 0 0 6px; } .explain p:last-child { margin: 0; }
 </style>
 </head>
 <body>
@@ -119,10 +129,137 @@ details summary { cursor: pointer; font-size: 13px; color: var(--soft); }
       <p class="err" id="hf-err"></p>
       <div class="wrap" id="hf-fit"></div>
     </div>
+    <h2>Cloud models (optional)</h2>
+    <p class="lead">Use Claude or any model on OpenRouter alongside your local ones. <strong>Cloud models are not private and cost money:</strong> what you send goes to that company, and you pay per use. Keys are stored only on this PC.</p>
+    <div class="card">
+      <div id="keys"></div>
+      <label for="or-q">Add a model from OpenRouter</label>
+      <div class="row"><input id="or-q" placeholder="Search, like: gemini" style="flex:1;min-width:200px"><button id="or-search">Search</button></div>
+      <div id="or-results"></div>
+      <p class="err" id="cloud-err"></p>
+      <label>Cloud models you can pick in Schedule and Create</label>
+      <div id="cloud-list"></div>
+    </div>
     <h2>Or download by exact name</h2>
     <div class="card"><div class="row">
       <input id="pull-name" placeholder="gemma4:12b   or   hf.co/owner/repo:Q4_K_M" style="flex:1;min-width:220px" aria-label="Model name">
       <button id="pull-go">Download</button></div><p class="err" id="pull-err"></p></div>
+  </section>
+
+  <section id="tab-create" hidden>
+    <div id="create-banner"></div>
+    <details class="setup card" id="setup"><summary>Setup: connect ComfyUI and add your workflows</summary>
+      <p class="hint">Images, video and music are made by ComfyUI. A <strong>workflow</strong> is ComfyUI's saved recipe for one kind of job. You pick a recipe that works on your card once, and AI Home reuses it with your own prompts and photos.</p>
+      <div class="two">
+        <div><label for="set-comfy">ComfyUI address</label><input id="set-comfy"></div>
+        <div><label for="set-models">ComfyUI models folder</label><input id="set-models" placeholder="C:\Users\you\Documents\ComfyUI\models"></div>
+        <div><label for="set-vision">Vision model (looks at images)</label><select id="set-vision"></select></div>
+        <div><label for="set-cad">Model that designs 3D objects</label><select id="set-cad"></select></div>
+      </div>
+      <p class="err" id="set-err"></p>
+      <div class="row"><button id="set-save">Save setup</button></div>
+      <label>Workflows</label>
+      <p class="hint">For each: in ComfyUI open <em>Workflow &gt; Browse Templates</em>, pick the template, let it download its models, press Run once to see it work, then choose <em>Workflow &gt; Export (API)</em> and add that file here.</p>
+      <div id="workflows"></div>
+    </details>
+
+    <h2>Make an image</h2>
+    <div class="card">
+      <label for="img-prompt">Describe it</label><textarea id="img-prompt" placeholder="A lighthouse on a cliff at sunset, oil painting"></textarea>
+      <div class="two"><div><label for="img-lora">LoRA (optional)</label><select id="img-lora" class="lora-pick"></select></div>
+        <div><label for="img-strength">LoRA strength</label><input id="img-strength" type="number" min="0" max="2" step="0.05" placeholder="1.0"></div></div>
+      <p class="err" id="img-err"></p><div class="row"><button class="primary" id="img-go">Make image</button></div>
+    </div>
+    <div class="gallery" id="img-gallery" style="margin-top:10px"></div>
+
+    <h2>Edit a whole folder of photos</h2>
+    <p class="lead">One instruction is applied to every photo in the folder. Your originals are never changed: results go into a new folder beside them.</p>
+    <div class="card">
+      <label for="bulk-folder">Folder</label><input id="bulk-folder" placeholder="C:\Users\you\Pictures\Trip">
+      <p class="hint">In File Explorer, open the folder, click the address bar, and copy the path.</p>
+      <label for="bulk-prompt">What to change</label><textarea id="bulk-prompt" placeholder="Make it look like a watercolor painting"></textarea>
+      <div class="two"><div><label for="bulk-lora">LoRA (optional)</label><select id="bulk-lora" class="lora-pick"></select></div>
+        <div><label for="bulk-strength">LoRA strength</label><input id="bulk-strength" type="number" min="0" max="2" step="0.05" placeholder="1.0"></div></div>
+      <p class="err" id="bulk-err"></p><div class="row"><button class="primary" id="bulk-go">Edit all photos</button></div>
+    </div>
+
+    <h2>Turn an image into a video</h2>
+    <div class="card">
+      <label for="vid-image">Image file</label><input id="vid-image" placeholder="C:\LocalAI\outputs\images\my-image.png">
+      <label for="vid-prompt">What should happen</label><textarea id="vid-prompt" placeholder="She turns to the camera and smiles; slow zoom in"></textarea>
+      <p class="err" id="vid-err"></p><div class="row"><button class="primary" id="vid-go">Make video</button></div>
+    </div>
+    <div class="gallery" id="vid-gallery" style="margin-top:10px"></div>
+
+    <h2>LoRAs</h2>
+    <div class="explain"><p><strong>What is a LoRA?</strong> A small add-on file (usually 20 to 300 MB) that teaches an image or video model one new thing: a particular person, a drawing style, a type of object. The big model stays the same; the LoRA nudges it.</p>
+      <p>Each LoRA is made for one model family (a FLUX LoRA won't work on SDXL), and most need a <strong>trigger word</strong> in your prompt, listed on the page you got it from. <strong>Strength</strong> is how hard it pushes: 1.0 is normal, lower is subtler.</p></div>
+    <div class="card">
+      <div id="loras"></div>
+      <label for="lora-url">Add a LoRA by link</label>
+      <div class="row"><input id="lora-url" placeholder="https://huggingface.co/... or https://civitai.com/api/download/models/..." style="flex:1;min-width:220px"><button id="lora-go">Download</button></div>
+      <p class="hint">Only .safetensors files from huggingface.co and civitai.com are accepted. Older formats can hide program code.</p>
+      <p class="err" id="lora-err"></p>
+    </div>
+
+    <h2>Characters</h2>
+    <div class="explain"><p>A <strong>character</strong> is a LoRA trained on photos of one person, so that person can appear in new images and videos. This step prepares the photos: it removes duplicates, checks sizes, and writes a caption for each with the vision model.</p>
+      <p><strong>Training is a separate step</strong> done in a trainer program; the guide explains it. Use 20 to 30 photos with different angles, distances, outfits, expressions and backgrounds.</p></div>
+    <div class="card">
+      <div class="two"><div><label for="chr-name">Character name</label><input id="chr-name" placeholder="Me"></div>
+        <div><label for="chr-trigger">Trigger word (optional)</label><input id="chr-trigger" placeholder="made up for you"></div></div>
+      <label for="chr-folder">Folder of photos</label><input id="chr-folder" placeholder="C:\Users\you\Pictures\Me">
+      <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;margin-top:12px"><input type="checkbox" id="chr-consent" style="width:auto;margin-top:4px">
+        <span>These are photos of me, or of someone who has agreed to this.</span></label>
+      <p class="err" id="chr-err"></p><div class="row"><button class="primary" id="chr-go">Prepare character</button></div>
+      <div id="characters"></div>
+    </div>
+
+    <h2>3D models (CAD)</h2>
+    <p class="lead">Describe an object with sizes. A model writes the design as OpenSCAD code, OpenSCAD builds it, and you get an STL file for a 3D printer plus the editable source. Good for brackets, stands, boxes and simple parts.</p>
+    <div class="card">
+      <label for="cad-desc">Describe the object</label><textarea id="cad-desc" placeholder="A phone stand 70 mm wide, tilted back 20 degrees, with a 12 mm lip at the front and a slot for a charging cable"></textarea>
+      <p class="err" id="cad-err"></p><div class="row"><button class="primary" id="cad-go">Design it</button></div>
+    </div>
+    <div class="grid" id="cad-gallery" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:16px"><button id="open-outputs">Open the outputs folder</button></div>
+  </section>
+
+  <section id="tab-music" hidden>
+    <div id="music-banner"></div>
+    <h2>Make music</h2>
+    <p class="lead">Describe the style, add lyrics if you want singing, and choose a length. Leave lyrics empty for an instrumental.</p>
+    <div class="card">
+      <label for="mus-style">Style</label><input id="mus-style" placeholder="Upbeat acoustic folk, female vocals, warm guitar, 110 bpm">
+      <div class="chips" id="mus-chips"></div>
+      <label for="mus-lyrics">Lyrics (optional)</label><textarea id="mus-lyrics" style="min-height:150px" placeholder="[verse]&#10;Morning light on the kitchen floor&#10;&#10;[chorus]&#10;We are home"></textarea>
+      <p class="hint">Mark sections with [verse], [chorus] and [bridge] on their own lines.</p>
+      <label for="mus-seconds">Length in seconds</label><input id="mus-seconds" type="number" min="5" max="600" value="60" style="max-width:140px">
+      <p class="err" id="mus-err"></p><div class="row"><button class="primary" id="mus-go">Make music</button></div>
+    </div>
+    <h2>Your tracks</h2>
+    <div id="mus-list"></div>
+  </section>
+
+  <section id="tab-plugins" hidden>
+    <div class="explain"><p><strong>What is a plugin?</strong> A small program that gives your AI agents new abilities, such as reading web pages or taking software apart. Plugins speak a standard called MCP.</p>
+      <p>AI Home runs a <strong>plugin hub</strong>. You connect the chat page and the app builder to the hub once. After that, every plugin you add here, and AI Home's own tools below, are available to both.</p></div>
+    <h2>Connect your agents to the hub (once)</h2>
+    <div class="card" id="hub-info"></div>
+    <h2>Built-in tools</h2>
+    <p class="lead">Always available through the hub. Files are exchanged through the shared <code class="copy">apps</code> folder, which agents see as <code class="copy">/projects</code>.</p>
+    <div class="wrap" id="builtin-tools"></div>
+    <h2>Your plugins</h2>
+    <div id="plugins"></div>
+    <h2>Add a plugin</h2>
+    <div class="grid" id="catalog"></div>
+    <div class="card" style="margin-top:12px">
+      <label for="pl-name">Name</label><input id="pl-name" placeholder="My plugin">
+      <label for="pl-command">Command that starts it</label><input id="pl-command" placeholder="npx -y some-plugin-package">
+      <label for="pl-url">Or its web address, if it is already running</label><input id="pl-url" placeholder="http://localhost:9000/mcp">
+      <p class="hint">A plugin's page gives one of these. <strong>A plugin is a program that runs on your PC with your permissions</strong>, so only add ones you trust.</p>
+      <p class="err" id="pl-err"></p><div class="row"><button class="primary" id="pl-add">Add plugin</button></div>
+    </div>
   </section>
 
   <section id="tab-schedule" hidden>
@@ -190,7 +327,8 @@ function fill(id, ...kids) { $(id).replaceChildren(...kids.flat().filter(Boolean
 const when = (iso) => iso ? new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 
 // ---------------------------------------------------------------- tabs
-const TABS = [["home", "Home"], ["parts", "Install & remove"], ["models", "Models"], ["schedule", "Schedule"], ["activity", "Activity"]];
+const TABS = [["home", "Home"], ["parts", "Install & remove"], ["models", "Models"], ["create", "Create"], ["music", "Music"],
+              ["plugins", "Plugins"], ["schedule", "Schedule"], ["activity", "Activity"]];
 function show(tab) {
   for (const [id] of TABS) { $("tab-" + id).hidden = id !== tab; $("nav-" + id).setAttribute("aria-selected", id === tab); }
   try { localStorage.setItem("tab", tab); } catch {}
@@ -271,14 +409,13 @@ function draw() {
           h("td", null, m.loaded ? h("span", { class: "pill ok" }, "Loaded") : null),
           h("td", null, h("button", { class: "danger", on: () => confirm(`Delete ${m.name} from disk? You can download it again later.`) &&
             doIt("/api/model", { action: "delete", name: m.name }, "Deleting " + m.name) }, "Delete")))))));
-  const sel = $("s-model"), keep = sel.value;
-  sel.replaceChildren(...(S.models || []).filter((m) => !/embed/i.test(m.name)).map((m) => h("option", { value: m.name }, m.name)));
-  if (keep) sel.value = keep;
+  setOptions($("s-model"), allModels());
+  drawMore();
 
   fill("schedules", !S.schedules.length ? h("p", { class: "lead" }, "No jobs yet. Add one below.") : S.schedules.map((s) => h("div", { class: "card", style: "margin-bottom:10px" },
     h("h3", null, s.name, h("span", { class: "pill" + (s.queued ? " ok" : s.enabled ? "" : " warn") }, s.queued ? "Running now" : s.enabled ? "On" : "Off"),
       s.last ? h("span", { class: "pill " + (s.last.ok ? "ok" : "bad") }, (s.last.ok ? "Last run worked, " : "Last run failed, ") + when(s.last.at)) : null),
-    h("p", null, ({ prompt: "Asks " + s.model, newsdesk: "Runs the news desk", command: "Runs: " + s.command })[s.kind] + " · " + s.when_input +
+    h("p", null, ({ prompt: "Asks " + modelLabel(s.model || ""), newsdesk: "Runs the news desk", command: "Runs: " + s.command })[s.kind] + " · " + s.when_input +
       (s.enabled && s.next ? " · next: " + when(s.next) : "")),
     h("div", { class: "row" },
       h("button", { disabled: s.queued, on: () => doIt("/api/schedule/change", { id: s.id, action: "run" }, "Started. The result appears here when it finishes.") }, "Run now"),
@@ -297,6 +434,124 @@ function draw() {
         ({ done: "Finished", failed: "Failed", running: "Working…", waiting: "Waiting" })[j.status])), d);
   }));
 }
+// ---------------------------------------------------------------- create, music, plugins, cloud
+function setOptions(sel, options, blank) {
+  const keep = sel.value;
+  sel.replaceChildren(...(blank != null ? [h("option", { value: "" }, blank)] : []), ...options.map((o) => h("option", { value: o.value ?? o }, o.label ?? o)));
+  if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+}
+function modelLabel(spec) { return spec.startsWith("claude:") ? spec.slice(7) + " (Claude, cloud)" : spec.startsWith("openrouter:") ? spec.slice(11) + " (OpenRouter, cloud)" : spec; }
+function allModels() { return [...(S.models || []).filter((m) => !/embed/i.test(m.name)).map((m) => m.name), ...S.cloud].map((m) => ({ value: m, label: modelLabel(m) })); }
+const out = (kind, name) => `/out/${kind}/${encodeURIComponent(name)}`;
+let settingsShown = false;
+function copyBtn(text) { return h("button", { on: () => navigator.clipboard.writeText(text).then(() => toast("Copied."), () => toast("Select the text and copy it by hand.")) }, "Copy"); }
+function drawMore() {
+  const missing = (role) => !S.workflows.find((w) => w.role === role).saved;
+  const comfyPart = S.components.find((c) => c.id === "comfyui");
+  const comfyNote = !comfyPart.installed ? ["ComfyUI isn't installed. ", h("button", { on: () => show("parts") }, "Go to Install & remove")]
+    : !S.comfy_up ? ["ComfyUI isn't running, or is at a different address. Open ComfyUI, then check the address under Setup."] : null;
+  fill("create-banner", comfyNote ? h("div", { class: "banner" }, comfyNote) : null,
+    ["image", "edit", "video"].some(missing) ? h("div", { class: "banner" }, "Some jobs still need a workflow: " +
+      S.workflows.filter((w) => !w.saved && w.role !== "music").map((w) => w.title.toLowerCase()).join("; ") + ". Open Setup below.") : null);
+  fill("music-banner", comfyNote ? h("div", { class: "banner" }, comfyNote) : null,
+    missing("music") ? h("div", { class: "banner" }, "Music needs a workflow first. ", h("button", { on: () => { show("create"); $("setup").open = true; } }, "Open Setup")) : null);
+  if (!settingsShown) { $("set-comfy").value = S.settings.comfy_url; $("set-models").value = S.settings.models_dir; settingsShown = true; }
+  setOptions($("set-vision"), allModels().filter((m) => m.value.includes(":") && (S.vision.includes(m.value) || /^(claude|openrouter):/.test(m.value))), S.vision.length ? "Automatic (" + S.vision[0] + ")" : "None available yet");
+  setOptions($("set-cad"), allModels());
+  if (!$("set-vision").dataset.set) { $("set-vision").value = S.settings.vision_model; $("set-cad").value = S.settings.cad_model; $("set-vision").dataset.set = 1; }
+  fill("workflows", S.workflows.map((w) => {
+    const pick = h("input", { type: "file", accept: ".json,application/json", style: "width:auto;max-width:230px", "aria-label": "Workflow file for " + w.title });
+    pick.addEventListener("change", async () => { if (!pick.files[0]) return;
+      try { await call("/api/workflow", { role: w.role, text: await pick.files[0].text() }); toast("Saved the workflow for: " + w.title); refresh(); }
+      catch (e) { toast(e.message); } });
+    return h("div", { class: "row", style: "padding:8px 0;border-bottom:1px solid var(--line)" },
+      h("span", { style: "flex:1;min-width:200px" }, h("strong", null, w.title), h("br"), h("span", { class: "hint" }, "Use " + w.how)),
+      h("span", { class: "pill" + (w.saved ? " ok" : " warn") }, w.saved ? (w.lora ? "Saved, takes a LoRA" : "Saved") : "Not added"), pick);
+  }));
+  for (const sel of document.querySelectorAll(".lora-pick")) setOptions(sel, (S.loras || []).map((l) => l.name), "None");
+  fill("loras", S.loras === null ? h("p", { class: "hint" }, "Set the ComfyUI models folder under Setup to see your LoRAs.")
+    : !S.loras.length ? h("p", { class: "hint" }, "No LoRAs yet.")
+    : h("table", null, h("tbody", null, S.loras.map((l) => h("tr", null, h("td", null, l.name), h("td", { class: "num" }, l.mb + " MB"),
+        h("td", null, h("button", { class: "danger", on: () => confirm(`Delete ${l.name}?`) && doIt("/api/lora", { action: "delete", value: l.name }, "Deleted.") }, "Delete")))))));
+  fill("characters", S.characters.length ? [h("label", null, "Prepared characters"), ...S.characters.map((c) => h("p", { class: "hint" },
+    h("strong", null, c.name), ` · ${c.photos} photos · trigger word `, h("code", { class: "copy" }, c.trigger), " · " + c.folder))] : null);
+  const thumbs = (kind) => S.recent[kind].map((n) => h("a", { href: out(kind, n), target: "_blank", rel: "noopener", title: n },
+    /\.(mp4|webm)$/i.test(n) ? h("video", { src: out(kind, n), controls: true, preload: "metadata" }) : h("img", { src: out(kind, n), alt: n, loading: "lazy" })));
+  fill("img-gallery", thumbs("images"));
+  fill("vid-gallery", thumbs("video"));
+  fill("cad-gallery", S.recent3d.map((d) => h("div", { class: "card" },
+    d.preview ? h("img", { src: `/out/3d/${encodeURIComponent(d.name)}/preview.png`, alt: "", style: "width:100%;border-radius:6px" }) : null,
+    h("p", null, d.name), h("div", { class: "row push" },
+      h("a", { class: "btn", href: `/out/3d/${encodeURIComponent(d.name)}/model.stl`, download: d.name + ".stl" }, "STL (to print)"),
+      h("a", { class: "btn", href: `/out/3d/${encodeURIComponent(d.name)}/model.scad`, download: d.name + ".scad" }, "Source")))));
+  const tracks = S.recent.music.map((n) => n).join("|");
+  if ($("mus-list").dataset.shown !== tracks) {  // rebuild only when the list changes, so a playing track isn't cut off
+    fill("mus-list", S.recent.music.length ? S.recent.music.map((n) => h("div", { class: "card", style: "margin-bottom:10px" }, h("p", null, n),
+      h("audio", { controls: true, preload: "none", src: out("music", n) }))) : h("p", { class: "lead" }, "Nothing yet."));
+    $("mus-list").dataset.shown = tracks;
+  }
+
+  fill("keys", S.keys.map((k) => { const box = h("input", { type: "password", placeholder: k.set ? "Saved, ending " + k.tail : "Paste your key", style: "flex:1;min-width:200px", autocomplete: "off", "aria-label": k.name + " key" });
+    return h("div", null, h("label", null, k.name + " key"), h("div", { class: "row" }, box,
+      h("button", { on: async () => { try { const r = await call("/api/key", { id: k.id, value: box.value }); toast(r.job ? "Saved. Installing the Claude library; see Activity." : "Saved."); refresh(); } catch (e) { toast(e.message); } } }, "Save"),
+      k.set ? h("button", { class: "danger", on: () => confirm(`Remove the ${k.name} key from this PC?`) && doIt("/api/key", { id: k.id, value: "" }, "Removed.") }, "Remove") : null)); }));
+  fill("cloud-list", S.cloud.length ? h("div", { class: "chips" }, S.cloud.map((m) => h("span", { class: "row" }, h("span", { class: "pill" }, modelLabel(m)),
+      h("button", { on: () => doIt("/api/model/test", { spec: m }, "Testing. See Activity for the answer.") }, "Test"),
+      m.startsWith("openrouter:") ? h("button", { on: () => doIt("/api/cloud_model", { action: "remove", spec: m }) }, "Remove") : null)))
+    : h("p", { class: "hint" }, "None yet. Save a Claude key to list Claude's models, or search OpenRouter above."));
+
+  const head = "Bearer " + S.hub.token;
+  fill("hub-info",
+    h("p", null, h("strong", null, "Chat page: "), "sign in as the owner, open Admin Settings > External Tools, click +, choose type ", h("strong", null, "MCP (Streamable HTTP)"), ", and enter:"),
+    h("div", { class: "row" }, h("span", { class: "hint" }, "Address"), h("code", { class: "copy" }, S.hub.url), copyBtn(S.hub.url)),
+    h("div", { class: "row" }, h("span", { class: "hint" }, "Key (Bearer)"), h("code", { class: "copy" }, S.hub.token), copyBtn(S.hub.token)),
+    h("p", null, "Then in a chat, click + > Tools and switch it on. The model must support tool calling (gpt-oss:20b does)."),
+    h("p", null, h("strong", null, "App builder: "), "in its settings, add an MCP server of the HTTP kind with the same address and key."),
+    h("p", { class: "hint" }, "Programs running directly on this PC, not in Docker, use ", h("code", { class: "copy" }, S.hub.local), " with header Authorization: " + head.slice(0, 14) + "…"));
+  fill("builtin-tools", h("table", null, h("tbody", null, S.hub.tools.map((t) => h("tr", null, h("td", { style: "white-space:nowrap" }, h("code", { class: "copy" }, t.name)), h("td", null, t.what))))));
+  fill("plugins", !S.plugins.length ? h("p", { class: "lead" }, "None yet. Add one below.") : S.plugins.map((p) => h("div", { class: "card", style: "margin-bottom:10px" },
+    h("h3", null, p.name, h("span", { class: "pill" + (p.error ? " bad" : p.running ? " ok" : p.enabled ? "" : " warn") },
+        p.error ? "Not working" : p.running ? "● Running" : p.enabled ? "Starts when first used" : "Off"),
+      p.tools != null ? h("span", { class: "pill" }, p.tools + " tools" + (p.on_demand ? ", looked up on demand" : ", always listed")) : null),
+    h("p", null, p.command || p.url), p.error ? h("p", { style: "color:var(--bad)" }, p.error) : null,
+    h("div", { class: "row" },
+      h("button", { on: () => doIt("/api/plugin/test", { id: p.id }, "Starting it. See Activity.") }, "Test"),
+      h("button", { on: () => doIt("/api/plugin/change", { id: p.id, action: "toggle" }) }, p.enabled ? "Turn off" : "Turn on"),
+      p.tools != null ? h("button", { title: "On demand: agents search for a tool when they need it, which saves the model's memory. Always listed: every tool is described to the model up front.",
+        on: () => doIt("/api/plugin/change", { id: p.id, action: "on_demand" }) }, p.on_demand ? "List tools always" : "Look up on demand") : null,
+      h("button", { class: "danger", on: () => confirm(`Remove the plugin "${p.name}"?`) && doIt("/api/plugin/change", { id: p.id, action: "remove" }, "Removed.") }, "Remove")))));
+  fill("catalog", S.catalog.map((c) => { const have = S.plugins.some((p) => p.command === c.command);
+    return h("div", { class: "card" }, h("h3", null, c.name, have ? h("span", { class: "pill ok" }, "Added") : null), h("p", null, c.what),
+      h("p", null, "Needs " + c.needs + " (see Install & remove)."),
+      h("div", { class: "row push" }, have ? null : h("button", { class: "primary", on: () => doIt("/api/plugin", { name: c.name, command: c.command, instructions: c.instructions || "" }, "Added. Press Test to start it.") }, "Add"))); }));
+}
+function go(button, err, build, said) {
+  $(button).onclick = async () => { $(err).textContent = "";
+    try { await call("/api/create", build()); toast(said + " See Activity for progress."); refresh(); } catch (e) { $(err).textContent = e.message; } };
+}
+go("img-go", "img-err", () => ({ kind: "image", prompt: $("img-prompt").value, lora: $("img-lora").value, strength: $("img-strength").value }), "Making your image.");
+go("bulk-go", "bulk-err", () => ({ kind: "bulk", folder: $("bulk-folder").value, prompt: $("bulk-prompt").value, lora: $("bulk-lora").value, strength: $("bulk-strength").value }), "Editing your photos.");
+go("vid-go", "vid-err", () => ({ kind: "video", image: $("vid-image").value, prompt: $("vid-prompt").value }), "Making your video.");
+go("chr-go", "chr-err", () => ({ kind: "character", name: $("chr-name").value, folder: $("chr-folder").value, trigger: $("chr-trigger").value, consent: $("chr-consent").checked }), "Preparing the character.");
+go("cad-go", "cad-err", () => ({ kind: "cad", description: $("cad-desc").value }), "Designing it.");
+go("mus-go", "mus-err", () => ({ kind: "music", style: $("mus-style").value, lyrics: $("mus-lyrics").value, seconds: Number($("mus-seconds").value) || 60 }), "Making your track.");
+fill("mus-chips", ["lofi hip hop, mellow piano, vinyl crackle", "cinematic orchestral, slow build, strings", "upbeat synth pop, female vocals, 120 bpm", "acoustic folk, fingerpicked guitar, male vocals"]
+  .map((t) => h("button", { on: () => { $("mus-style").value = t; } }, t)));
+$("set-save").onclick = async () => { $("set-err").textContent = "";
+  try { await call("/api/settings", { comfy_url: $("set-comfy").value, models_dir: $("set-models").value, vision_model: $("set-vision").value, cad_model: $("set-cad").value }); toast("Saved."); refresh(); }
+  catch (e) { $("set-err").textContent = e.message; } };
+$("lora-go").onclick = async () => { $("lora-err").textContent = "";
+  try { await call("/api/lora", { action: "download", value: $("lora-url").value }); toast("Downloading. See Activity for progress."); $("lora-url").value = ""; refresh(); }
+  catch (e) { $("lora-err").textContent = e.message; } };
+$("open-outputs").onclick = async () => { try { const r = await call("/api/open", { kind: "outputs" }); toast("Your results are in " + r.folder); } catch (e) { toast(e.message); } };
+$("or-search").onclick = async () => { $("cloud-err").textContent = "";
+  try { const rows = await call("/api/openrouter?q=" + encodeURIComponent($("or-q").value));
+    fill("or-results", rows.length ? h("div", { class: "chips" }, rows.map((r) => h("button", { title: r.name, on: () => doIt("/api/cloud_model", { action: "add", spec: "openrouter:" + r.id }, "Added " + r.id) }, "+ " + r.id)))
+      : h("p", { class: "hint" }, "Nothing found.")); } catch (e) { $("cloud-err").textContent = e.message; } };
+$("pl-add").onclick = async () => { $("pl-err").textContent = "";
+  try { await call("/api/plugin", { name: $("pl-name").value, command: $("pl-command").value, url: $("pl-url").value }); toast("Added. Press Test to start it.");
+    for (const id of ["pl-name", "pl-command", "pl-url"]) $(id).value = ""; refresh(); } catch (e) { $("pl-err").textContent = e.message; } };
+
 async function showRun(id, file) {
   try { openRuns[id] = (await call(`/api/output?id=${id}&file=${encodeURIComponent(file)}`)).text || "(empty)"; draw(); } catch (e) { toast(e.message); }
 }

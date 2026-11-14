@@ -37,11 +37,19 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(HERE))
 import fit  # noqa: E402  (the model-fit checker, reused for the Models tab)
+import comfy  # noqa: E402
+import gateway  # noqa: E402
+import providers  # noqa: E402
+import studio  # noqa: E402
 
 PORT = 3010
 TASK_NAME = "AI Home"
 OLLAMA = "http://127.0.0.1:11434"
+MEDIA = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif",
+         ".mp4": "video/mp4", ".webm": "video/webm", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".flac": "audio/flac",
+         ".ogg": "audio/ogg", ".stl": "model/stl", ".scad": "text/plain"}
 MODEL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:-]{0,199}$")
 
 # Everything the panel can manage. "required" parts are the basics; the rest are optional.
@@ -82,6 +90,12 @@ COMPONENTS = [
      "start_hint": "Open Tailscale from the Start menu and sign in."},
     {"id": "git", "name": "Git", "group": "optional", "kind": "winget", "winget": "Git.Git",
      "what": "Downloads updates to this folder. The app builder also uses it."},
+    {"id": "openscad", "name": "OpenSCAD", "group": "optional", "kind": "winget", "winget": "OpenSCAD.OpenSCAD",
+     "what": "Turns the designs a model writes into 3D-printable files. Needed for Create > 3D models."},
+    {"id": "nodejs", "name": "Node.js", "group": "optional", "kind": "winget", "winget": "OpenJS.NodeJS.LTS",
+     "what": "Runs most plugins, including REA. Install it before adding plugins that start with \"npx\"."},
+    {"id": "uv", "name": "uv", "group": "optional", "kind": "winget", "winget": "astral-sh.uv",
+     "what": "Runs plugins that start with \"uvx\"."},
 ]
 BY_ID = {c["id"]: c for c in COMPONENTS}
 STARTER_MODELS = [
@@ -93,7 +107,8 @@ GUIDES = [("01-concepts.md", "The five ideas you need"), ("02-install.md", "Inst
           ("03-models.md", "Choosing models"), ("04-app-builder.md", "The app builder"),
           ("05-images-video.md", "Images and video"), ("06-voices-audiobooks.md", "Voices and audiobooks"),
           ("07-iphone.md", "Using it from your iPhone"), ("08-news-desk.md", "The news desk"),
-          ("09-troubleshooting.md", "Troubleshooting"), ("10-control-panel.md", "This control panel")]
+          ("09-troubleshooting.md", "Troubleshooting"), ("10-control-panel.md", "This control panel"),
+          ("11-create.md", "Create: images, photos, video, 3D, music"), ("12-plugins-and-cloud.md", "Plugins and cloud models")]
 
 
 # ================================================================== talking to the PC
@@ -318,6 +333,11 @@ class App:
         self.status, self.winget_cache, self.gpu, self.autostart = {}, {}, None, False
         self.schedules = self.load()
         self.busy_tasks = set()
+        self.keys = providers.Keys(self.data / "keys.json")
+        self.providers = providers.Providers(self.keys, self.ollama)
+        self.studio = studio.Studio(self.root, self.data, self.providers, self.sys)
+        self.hub = gateway.Hub(self.data, builtins=self.studio.tools())
+        self.slow, self.hub_port = {}, gateway.HUB_PORT
 
     # ---------------------------------------------------------------- jobs
     # Two lines of work: "manage" (installs, downloads) and "tasks" (scheduled jobs). Each line
@@ -432,7 +452,146 @@ class App:
                 "guides": [{"file": f, "title": t} for f, t in GUIDES],
                 "drafts": drafts[-1].parent.name if drafts else None,
                 "autostart": self.autostart,
+                **self.extra_state(),
             }
+
+    def cached(self, name, seconds, work, default):
+        """Remember a slow answer for a while, so the page's 3-second refresh stays quick."""
+        at, value = self.slow.get(name, (0, default))
+        if time.time() - at > seconds:
+            try:
+                value = work()
+            except Exception:
+                value = default
+            self.slow[name] = (time.time(), value)
+        return value
+
+    def cloud_models(self):
+        try:
+            return json.loads((self.data / "cloud_models.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+
+    def recent(self, kind, count=8):
+        files = [f for f in (self.root / "outputs" / kind).glob("*") if f.is_file() and f.suffix.lower() in MEDIA]
+        files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        return [f.name for f in files[:count]]
+
+    def recent_3d(self, count=6):
+        folders = sorted((d for d in (self.root / "outputs" / "3d").glob("*") if (d / "model.stl").exists()),
+                         key=lambda d: d.stat().st_mtime, reverse=True)
+        return [{"name": d.name, "preview": (d / "preview.png").exists()} for d in folders[:count]]
+
+    def extra_state(self):
+        settings = self.studio.settings()
+        claude = self.cached("claude", 600, self.providers.claude_models, [])
+        return {
+            "keys": self.keys.view(),
+            "cloud": ["claude:" + m for m in claude] + self.cloud_models(),
+            "settings": settings,
+            "vision": self.cached("vision", 120, self.providers.vision_models, []),
+            "comfy_up": self.cached("comfy", 10, self.studio.comfy().alive, False),
+            "workflows": self.studio.workflows_view(),
+            "loras": comfy.list_loras(settings["models_dir"]) if settings["models_dir"] else None,
+            "characters": self.studio.characters(),
+            "recent": {k: self.recent(k) for k in ("images", "edits", "video", "music")},
+            "recent3d": self.recent_3d(),
+            "plugins": self.hub.view(),
+            "catalog": gateway.CATALOG,
+            "hub": {"url": f"http://host.docker.internal:{self.hub_port}/mcp", "local": f"http://localhost:{self.hub_port}/mcp",
+                    "token": self.hub.token, "tools": [{"name": t["name"], "what": t["description"]} for t in self.studio.tools()]},
+        }
+
+    # ---------------------------------------------------------------- keys, creating, plugins
+
+    def set_key(self, name, value):
+        self.keys.set(name, value)
+        self.slow.pop("claude", None)
+        if name == "anthropic" and value.strip():
+            try:
+                import anthropic  # noqa: F401
+            except ImportError:
+                return self.submit("manage", "Install the Claude library", lambda job: self.sys.stream(
+                    [sys.executable, "-m", "pip", "install", "anthropic"], job.log) == 0)
+        return None
+
+    def set_cloud_model(self, action, spec):
+        spec = str(spec).strip()
+        if not re.fullmatch(r"(claude|openrouter):[A-Za-z0-9][A-Za-z0-9._/:\-]{0,150}", spec):
+            raise ValueError("That isn't a cloud model name.")
+        models = [m for m in self.cloud_models() if m != spec] + ([spec] if action == "add" else [])
+        (self.data / "cloud_models.json").write_text(json.dumps(models), encoding="utf-8")
+
+    def test_model(self, spec):
+        if not MODEL_NAME.fullmatch(spec or ""):
+            raise ValueError("Pick a model to test.")
+
+        def work(job):
+            job.log(f"Asking {spec} to reply with one word")
+            job.log("It answered: " + self.providers.chat(spec, "Reply with the single word OK.", timeout=300)[:200])
+        return self.submit("manage", f"Test {spec}", work)
+
+    def create(self, body):
+        """Start one creative job. They share the scheduled-jobs line, so the graphics card does one at a time."""
+        kind, st = body.get("kind"), self.studio
+        text = lambda k: str(body.get(k, "")).strip()  # noqa: E731
+        strength = float(body["strength"]) if str(body.get("strength", "")).strip() else None
+        jobs = {
+            "image": ("Make an image", lambda j: st.generate_image(j.log, text("prompt"), text("lora"), strength)),
+            "bulk": ("Edit a folder of photos", lambda j: st.bulk_edit(j.log, text("folder"), text("prompt"), text("lora"), strength)),
+            "video": ("Make a video", lambda j: st.make_video(j.log, text("image"), text("prompt"))),
+            "music": ("Make music", lambda j: st.make_music(j.log, text("style"), str(body.get("lyrics", "")), body.get("seconds") or 60)),
+            "character": ("Prepare a character", lambda j: st.character_prepare(j.log, text("name"), text("folder"), text("trigger"), body.get("consent") is True)),
+            "cad": ("Design a 3D model", lambda j: st.make_3d(j.log, text("description"), text("model") or None)),
+        }
+        if kind not in jobs:
+            raise ValueError("That button doesn't exist.")
+        title, work = jobs[kind]
+
+        def run(job):
+            try:
+                work(job)
+            except (studio.StudioError, providers.ModelError) as e:
+                job.log(str(e))
+                return False
+        return self.submit("tasks", title, run)
+
+    def lora(self, action, value):
+        models = self.studio.models_dir()
+        if action == "delete":
+            comfy.lora_path(models, value).unlink(missing_ok=True)
+            return None
+        if action != "download":
+            raise ValueError("That button doesn't exist.")
+        comfy.lora_url(value)  # refuse a bad link now, not later in the job
+
+        def work(job):
+            try:
+                comfy.download_lora(models, value, job.log, token=self.keys.get("civitai"))
+            except comfy.ComfyError as e:
+                job.log(str(e))
+                return False
+        return self.submit("manage", "Download a LoRA", work)
+
+    def plugin_test(self, pid):
+        p = self.hub.find(pid)
+
+        def work(job):
+            job.log(f"Starting {p['name']}. The first start can take a minute while it downloads.")
+            self.hub.stop(pid)
+            self.hub.connect(p)
+            n = len(self.hub.tools[pid])
+            job.log(f"It works: {n} tools." + (" Because that is a lot, agents will look them up on demand." if self.hub.is_on_demand(p) else ""))
+        return self.submit("manage", f"Test plugin {p['name']}", work)
+
+    def open_folder(self, kind):
+        folder = {"outputs": self.root / "outputs", "characters": self.root / "characters", "apps": self.root / "apps"}.get(kind)
+        if not folder:
+            raise ValueError("No such folder.")
+        folder.mkdir(parents=True, exist_ok=True)
+        if hasattr(os, "startfile"):
+            os.startfile(str(folder))  # opens it in File Explorer
+        return str(folder)
 
     # ---------------------------------------------------------------- install, start, stop, uninstall
 
@@ -682,10 +841,7 @@ class App:
             if s["kind"] == "prompt":
                 # A fresh conversation every time: the job has no memory of earlier runs or chats.
                 job.log(f"Asking {s['model']}")
-                r = api(self.ollama, "/api/chat", {"model": s["model"], "stream": False,
-                                                   "messages": [{"role": "user", "content": s["prompt"]}]},
-                        timeout=1800)
-                lines = [r.get("message", {}).get("content", "").strip() or "(the model gave an empty answer)"]
+                lines = [self.providers.chat(s["model"], s["prompt"]) or "(the model gave an empty answer)"]
             else:
                 if s["kind"] == "newsdesk":
                     args, shell = [sys.executable, str(self.root / "newsdesk" / "newsdesk.py"), "run"], False
@@ -783,8 +939,18 @@ class Handler(BaseHTTPRequestHandler):
             if m:
                 f = self.app.root / "newsdesk" / "drafts" / m.group(1) / "review.html"
                 return self.reply(200, f.read_bytes(), "text/html") if f.exists() else self.reply(404, "Not found.", "text/plain")
+            m = re.fullmatch(r"/out/(images|edits|video|music)/([^/\\]+)", urllib.parse.unquote(url.path))
+            m3 = re.fullmatch(r"/out/3d/([^/\\]+)/(preview\.png|model\.stl|model\.scad)", urllib.parse.unquote(url.path))
+            if m or m3:
+                f = self.app.root / "outputs" / (m.group(1) if m else "3d") / (m.group(2) if m else m3.group(1) + "/" + m3.group(2))
+                kind = MEDIA.get(f.suffix.lower())
+                if ".." in f.parts or not kind or not f.is_file():
+                    return self.reply(404, "Not found.", "text/plain")
+                return self.reply(200, f.read_bytes(), kind)
             if not self.trusted():
                 return self.reply(403, {"error": "Reload the page."})
+            if url.path == "/api/openrouter":
+                return self.reply(200, self.app.providers.openrouter_models(q.get("q", "")))
             if url.path == "/api/state":
                 return self.reply(200, self.app.state())
             if url.path == "/api/fit":
@@ -794,14 +960,14 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/output":
                 return self.reply(200, {"text": self.app.output(q.get("id", ""), q.get("file", ""))})
             self.reply(404, {"error": "Not found."})
-        except (ValueError, OSError) as e:
+        except (ValueError, OSError, providers.ModelError) as e:
             self.reply(400, {"error": str(e)})
 
     def do_POST(self):
         if not self.trusted():
             return self.reply(403, {"error": "Reload the page."})
         try:
-            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 200_000)) or b"{}")
+            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 20_000_000)) or b"{}")
             if self.path == "/api/component":
                 job = self.app.act(body.get("id"), body.get("action"))
             elif self.path == "/api/model":
@@ -811,6 +977,32 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/schedule/change":
                 self.app.schedule_change(body.get("id"), body.get("action"))
                 return self.reply(200, {})
+            elif self.path == "/api/key":
+                job = self.app.set_key(body.get("id"), str(body.get("value", "")))
+                return self.reply(200, {"job": job.id if job else None})
+            elif self.path == "/api/cloud_model":
+                self.app.set_cloud_model(body.get("action"), body.get("spec"))
+                return self.reply(200, {})
+            elif self.path == "/api/model/test":
+                job = self.app.test_model(str(body.get("spec", "")).strip())
+            elif self.path == "/api/settings":
+                return self.reply(200, self.app.studio.save_settings(body))
+            elif self.path == "/api/workflow":
+                return self.reply(200, self.app.studio.save_workflow(body.get("role"), str(body.get("text", ""))))
+            elif self.path == "/api/create":
+                job = self.app.create(body)
+            elif self.path == "/api/lora":
+                job = self.app.lora(body.get("action"), str(body.get("value", "")))
+                return self.reply(200, {"job": job.id if job else None})
+            elif self.path == "/api/plugin":
+                return self.reply(200, self.app.hub.add(body.get("name", ""), body.get("command", ""), body.get("url", ""), body.get("instructions", "")))
+            elif self.path == "/api/plugin/change":
+                self.app.hub.change(body.get("id"), body.get("action"))
+                return self.reply(200, {})
+            elif self.path == "/api/plugin/test":
+                job = self.app.plugin_test(body.get("id"))
+            elif self.path == "/api/open":
+                return self.reply(200, {"folder": self.app.open_folder(body.get("kind"))})
             elif self.path == "/api/autostart":
                 self.app.set_autostart(bool(body.get("on")))
                 return self.reply(200, {})
@@ -821,7 +1013,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 return self.reply(404, {"error": "Not found."})
             self.reply(200, {"job": job.id})
-        except (ValueError, OSError) as e:
+        except (ValueError, OSError, studio.StudioError, comfy.ComfyError, gateway.PluginError, providers.ModelError) as e:
             self.reply(400, {"error": str(e)})
 
 
@@ -844,6 +1036,11 @@ def main(argv=None):
             webbrowser.open(f"http://localhost:{a.port}")
         return
     app.start_threads()
+    try:  # the plugin hub: where the chat page and app builder find their tools
+        hub_server = gateway.serve_hub(app.hub, app.hub_port)
+        threading.Thread(target=hub_server.serve_forever, daemon=True).start()
+    except OSError:
+        print(f"Port {app.hub_port} is busy, so the plugin hub is off this time.")
     print(f"AI Home is running at http://localhost:{a.port}\nLeave this window open. Close it to stop scheduled jobs.")
     if not a.no_browser:
         webbrowser.open(f"http://localhost:{a.port}")
@@ -851,6 +1048,8 @@ def main(argv=None):
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        app.hub.stop_all()  # don't leave plugin programs running
 
 
 if __name__ == "__main__":

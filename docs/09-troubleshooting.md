@@ -28,6 +28,24 @@ Find the symptom, try the fixes in order.
 | A scheduled job didn't run | AI Home or the PC was off at that time | Tick "Start AI Home quietly when I sign in"; set Sleep to Never |
 | A model job fails straight away | Ollama is off, or that model was deleted | Start Ollama; edit the job and pick a model you have |
 
+## Create, Music and Plugins
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| "No workflow saved for…" | That job has no workflow yet | Create → Setup; see [11](11-create.md#one-time-setup-per-kind-of-job) |
+| "This is ComfyUI's normal save format" | You used Save instead of Export (API) | In ComfyUI choose Workflow → Export (API). Turn on Dev mode in its settings if that's missing |
+| "Could not reach ComfyUI" | ComfyUI is closed, or on a different port | Open ComfyUI; check the address under Create → Setup |
+| "a model file this workflow names is not on this PC" | The LoRA or model isn't downloaded | Open the workflow in ComfyUI and download it there |
+| "This workflow has no Load LoRA box" | You picked a LoRA, but the workflow can't take one | Add a Load LoRA node in ComfyUI, run it, export again |
+| "I can't tell which box holds the prompt" | An unusual workflow layout | Start from an official template and export it unchanged |
+| Results look nothing like the instruction | The prompt went to the wrong box | Open the workflow in ComfyUI and check; report it, since this is the least-tested part |
+| "OpenSCAD isn't installed" | 3D needs it | Install & remove → OpenSCAD, then restart AI Home |
+| 3D model builds but is the wrong shape | The model misunderstood | Add sizes and be specific; pick a stronger model under Setup |
+| Plugin shows "Not working" | Its program isn't installed | Read the red message. `npx` needs Node.js, `uvx` needs uv; restart AI Home after installing |
+| Agent says it has no tools | The hub isn't connected, or tools are off in that chat | [12](12-plugins-and-cloud.md#connect-your-agents-once) |
+| Chat page's tool list hangs after adding the hub | It was added as the wrong type | Delete it and add again as MCP (Streamable HTTP) |
+| "The Claude library isn't installed yet" | The install hasn't finished | Check Activity; save the Claude key again |
+
 ## Chat
 
 | Symptom | Likely cause | Fix |

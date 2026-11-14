@@ -1,12 +1,13 @@
 # Your AI home
 
-Everything here runs on your own PC: chat, an app builder, images, video, voices, audiobooks and a first-pass news desk for your site. Nothing is sent to a cloud service, and there are no subscriptions.
+Everything here runs on your own PC: chat, an app builder, images, bulk photo edits, video, music, 3D models, voices, audiobooks, plugins for your agents, and a first-pass news desk for your site. Nothing is sent to a cloud service unless you add a cloud model yourself, and there are no subscriptions.
 
 It is set up for **Windows with a 16 GB NVIDIA graphics card**.
 
 > **Read this first: what has and hasn't been tested.**
 > This was written on a Linux server with no graphics card, so:
-> - **Tested:** the three Python tools (model-fit checker, audiobook maker, news desk) and the AI Home control panel. Together they have 37 automated tests. The model-fit checker and the news reader were also run against the real Hugging Face and real news sites.
+> - **Tested:** the three Python tools (model-fit checker, audiobook maker, news desk) and the AI Home control panel. Together they have 70 automated tests. The model-fit checker and the news reader were also run against the real Hugging Face and real news sites. The plugin hub was tested with the official MCP library, and the Claude connection with Anthropic's official library.
+> - **Tested against pretend services only:** image, photo-edit, video, music and 3D jobs ran against stand-ins for ComfyUI and OpenSCAD, and cloud models against stand-ins for Claude and OpenRouter. None has touched the real thing.
 > - **Tested against a pretend PC only:** the control panel's install, remove and schedule buttons were clicked through in a real browser, but the "PC" behind them was a stand-in that imitates Windows' installer, Docker and Ollama.
 > - **Checked but not run:** the Docker file is valid and its three images exist, but the containers have never been started.
 > - **Not tested at all:** `Start AI Home.bat` and the three scripts in `scripts\`. They have been proofread, not run. If one fails, the error message and [troubleshooting](docs/09-troubleshooting.md) are the place to start.
@@ -17,6 +18,12 @@ It is set up for **Windows with a 16 GB NVIDIA graphics card**.
 |---|---|---|---|
 | **Manage everything from one page**: install, remove, open, schedule | **AI Home** | `http://localhost:3010` | [10](docs/10-control-panel.md) |
 | Run jobs at set times | AI Home's Schedule tab | Same page | [10](docs/10-control-panel.md#scheduled-jobs) |
+| Edit a whole folder of photos with one instruction | AI Home's Create tab | Same page | [11](docs/11-create.md#edit-a-whole-folder-of-photos) |
+| Use LoRAs, and build a character from photos | AI Home's Create tab | Same page | [11](docs/11-create.md#loras) |
+| Design 3D-printable parts (CAD) | AI Home's Create tab + OpenSCAD | Same page | [11](docs/11-create.md#3d-models-cad) |
+| Make music | AI Home's Music tab | Same page | [11](docs/11-create.md#music) |
+| Give agents plugins (like REA) and vision | AI Home's Plugins tab | Same page | [12](docs/12-plugins-and-cloud.md) |
+| Use Claude or any OpenRouter model | AI Home's Models tab | Same page | [12](docs/12-plugins-and-cloud.md#cloud-models-claude-and-openrouter) |
 | Chat with a model, from the PC or iPhone | Open WebUI | `http://localhost:3000` | [02](docs/02-install.md) |
 | Pick any model from Hugging Face that fits your card | Ollama + `tools\fit.py` | A terminal | [03](docs/03-models.md) |
 | Build an app from one sentence and let it run | OpenHands Agent Canvas | `http://localhost:3001/canvas` | [04](docs/04-app-builder.md) |
@@ -80,4 +87,8 @@ You need about **150 GB of free disk space** (models are big) and an up-to-date 
 python -m unittest discover tests
 ```
 
-This runs the 37 tests with a pretend model and a pretend PC, so it works before anything is installed.
+This runs the tests with a pretend model and a pretend PC, so it works before anything is installed. A few tests need two extra libraries and are skipped without them; to run all 70:
+
+```powershell
+python -m pip install mcp anthropic
+```

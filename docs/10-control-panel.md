@@ -4,13 +4,16 @@
 
 > **What has been tested.** The panel was driven in a real browser against a *pretend* PC: a stand-in that answers the way Windows' installer, Docker and Ollama would. 21 automated tests cover installing, removing, models, schedules and security. It has **not** been run on real Windows, so the first real install is the true test. `Start AI Home.bat` itself has never been run.
 
-## The five tabs
+## The tabs
 
 | Tab | What you do there |
 |---|---|
 | **Home** | See what is running, open each part, unload models from the graphics card, read the guides |
 | **Install & remove** | One click to install, start, stop or uninstall each part |
 | **Models** | Download the starter models, check any Hugging Face model against your card, delete models |
+| **Create** | Images, bulk photo edits, video, LoRAs, characters and 3D models ([11](11-create.md)) |
+| **Music** | Make music from a description and lyrics ([11](11-create.md#music)) |
+| **Plugins** | Give your agents new tools, and connect them to the plugin hub ([12](12-plugins-and-cloud.md)) |
 | **Schedule** | Make jobs that run by themselves at set times |
 | **Activity** | Watch progress and read the log of everything the panel did |
 
@@ -24,7 +27,7 @@ Each part is a card with a status and buttons.
 2. **Docker Desktop**: runs the web pages. **Restart the PC after this one**, then open Docker Desktop once from the Start menu.
 3. **Chat home page**: needs the two above running.
 
-**Optional:** Voice engine, App builder, ComfyUI, Tailscale, Git. Add or remove any of them at any time.
+**Optional:** Voice engine, App builder, ComfyUI, Tailscale, Git, OpenSCAD (for 3D models), and Node.js and uv (for plugins). Add or remove any of them at any time.
 
 ### What each button really does
 
@@ -99,4 +102,4 @@ Close the black window that opened with it. If it was started at sign-in there i
 
 ---
 
-Back to the [README](../README.md)
+Next: [11. Create](11-create.md)

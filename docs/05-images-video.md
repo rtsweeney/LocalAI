@@ -55,4 +55,6 @@ Each image and video model has its own license, and several forbid commercial us
 
 ---
 
+Once a template works here, AI Home can run it for you with your own prompts, across whole folders of photos, and for your agents: see [11. Create](11-create.md).
+
 Next: [06. Voices and audiobooks](06-voices-audiobooks.md)
